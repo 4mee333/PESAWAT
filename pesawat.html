@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pesawat Insight — Smart Lookup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Poppins',sans-serif;margin:0;padding:0;background:#f0f4f8;color:#111827;}
+.search input{border:0;outline:0;padding:10px;border-radius:10px;width:100%;}
+.result-card{background:#fff;padding:12px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.05);cursor:pointer;}
+.result-card:hover{transform:translateY(-3px);transition:0.2s;}
+.chip{background:rgba(15,23,42,0.06);padding:4px 8px;border-radius:999px;font-size:12px;color:#6b7280;}
+.muted{color:#6b7280;}
+.fade-up{animation:fadeUp .36s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.modal-backdrop{background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;}
+.modal-box{background:#fff;border-radius:16px;padding:18px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+</style>
+</head>
+<body>
+
+<header class="p-4 bg-indigo-600 text-white text-center font-bold text-xl">Pesawat Insight — Smart Lookup</header>
+
+<main class="max-w-4xl mx-auto p-4">
+<div class="search flex gap-2 mb-4">
+<input id="q" placeholder="Ketik topik seputar pesawat..." />
+<button id="searchBtn" class="px-4 py-2 rounded-md bg-indigo-600 text-white">Cari</button>
+</div>
+<section id="resultsArea" class="grid gap-4 grid-cols-1 md:grid-cols-2"></section>
+</main>
+
+<div id="modalRoot" class="fixed inset-0 hidden modal-backdrop">
+<div class="modal-box fade-up">
+<div class="flex justify-between items-start">
+<h3 id="modalTitle" class="text-xl font-bold"></h3>
+<button id="btnClose" class="px-3 py-1 bg-gray-800 text-white rounded">Tutup</button>
+</div>
+<div id="modalBody" class="mt-4 text-gray-700 text-sm"></div>
+<div class="mt-4 flex gap-2">
+<div class="chip">Kategori</div>
+<div id="modalCategory" class="muted"></div>
+</div>
+<div class="mt-2 flex gap-2">
+<div class="chip">Tag</div>
+<div id="modalTags" class="muted"></div>
+</div>
+</div>
+</div>
+
+<script>
+const DATASET = [
+      {title:"Pitot tube tersumbat", desc:"Pitot tube tersumbat oleh serangga atau es; menyebabkan airspeed indicator salah.", category:"Avionik", tags:["pitot","airspeed","sensor"]},
+      {title:"Kebocoran APU", desc:"Auxiliary Power Unit bocor oli; periksa seal dan gasket.", category:"Mesin", tags:["APU","oil","leak"]},
+      {title:"Thrust reverser stuck", desc:"Thrust reverser tidak kembali; cek actuator dan hydraulic.", category:"Mesin", tags:["reverser","thrust","hydraulic"]},
+      {title:"Oxygen mask kabin rusak", desc:"Masker oksigen tidak deploy; periksa sistem dan cartridge.", category:"Sistem", tags:["oxygen","safety","cabin"]},
+      {title:"Fire warning palsu", desc:"Fire warning aktif tanpa api; sensor perlu kalibrasi.", category:"Sistem", tags:["fire","warning","sensor"]},
+      {title:"Slat tidak extend", desc:"Leading edge slat gagal extend; hydraulic problem.", category:"Aerodinamika", tags:["slat","hydraulic","wing"]},
+      {title:"Propeller blade crack", desc:"Retak pada propeller blade; penggantian segera diperlukan.", category:"Mesin", tags:["propeller","crack","blade"]},
+      {title:"Fuel imbalance", desc:"Ketidakseimbangan bahan bakar antar tangki; cek crossfeed valve.", category:"Sistem", tags:["fuel","imbalance","tank"]},
+      {title:"Navigation light mati", desc:"Lampu navigasi tidak menyala; ganti bulb atau relay.", category:"Sistem", tags:["light","navigation","electrical"]},
+      {title:"Cargo door seal rusak", desc:"Seal pintu kargo bocor; menyebabkan depressurization.", category:"Struktur", tags:["cargo","door","seal"]},
+      {title:"Engine mounting bolt kendor", desc:"Baut mounting engine kendor; lakukan torque check.", category:"Mesin", tags:["engine","mounting","bolt"]},
+      {title:"Anti-skid brake failure", desc:"Sistem anti-skid rem gagal; landing jadi berbahaya.", category:"Landing Gear", tags:["brake","anti-skid","landing"]},
+      {title:"VHF radio interference", desc:"Radio VHF mengalami interference; cek antenna dan wiring.", category:"Avionik", tags:["radio","VHF","communication"]},
+      {title:"Windshield crack", desc:"Kaca depan kokpit retak; segera ganti sebelum terbang.", category:"Struktur", tags:["windshield","cockpit","crack"]},
+      {title:"Lavatory drain clog", desc:"Saluran toilet kabin tersumbat; lakukan cleaning.", category:"Sistem", tags:["lavatory","drain","cabin"]},
+      {title:"Icing pada tail section", desc:"Es menumpuk di ekor pesawat; aktifkan de-icing.", category:"Struktur", tags:["ice","tail","deicing"]},
+      {title:"Bleed air leak", desc:"Kebocoran bleed air dari engine; periksa duct dan valve.", category:"Mesin", tags:["bleed","air","leak"]},
+      {title:"Trim tab rusak", desc:"Trim tab elevator rusak; kontrol pitch terganggu.", category:"Kontrol Penerbangan", tags:["trim","elevator","control"]},
+      {title:"Fuel filter tersumbat", desc:"Filter bahan bakar kotor; flow terganggu.", category:"Sistem", tags:["fuel","filter","clog"]},
+      {title:"Cabin altitude warning", desc:"Warning tekanan kabin; cek outflow valve.", category:"Sistem", tags:["cabin","altitude","pressure"]},
+      {title:"Tail strike saat takeoff", desc:"Ekor pesawat menyentuh runway; inspeksi struktur ekor.", category:"Struktur", tags:["tail","strike","runway"]},
+      {title:"Generator overheat", desc:"Generator listrik overheat; cek cooling system.", category:"Sistem", tags:["generator","overheat","electrical"]},
+      {title:"Flight recorder error", desc:"Black box tidak merekam; periksa power dan storage.", category:"Avionik", tags:["recorder","black box","data"]},
+      {title:"Galley oven malfunction", desc:"Oven kabin tidak panas; cek circuit breaker.", category:"Sistem", tags:["galley","oven","cabin"]},
+      {title:"Rudder pedal jamming", desc:"Pedal rudder macet; periksa cable dan bearing.", category:"Kontrol Penerbangan", tags:["rudder","pedal","jam"]},
+      {title:"Wing tank vent blocked", desc:"Ventilasi tangki sayap tersumbat; tekanan abnormal.", category:"Sistem", tags:["wing","tank","vent"]},
+      {title:"Stall warning horn gagal", desc:"Horn peringatan stall tidak bunyi; ganti unit.", category:"Avionik", tags:["stall","warning","horn"]},
+      {title:"Pneumatic system leak", desc:"Sistem pneumatik bocor; cek seal dan valve.", category:"Sistem", tags:["pneumatic","leak","air"]},
+      {title:"Emergency slide expired", desc:"Slide evakuasi kadaluarsa; perlu recertification.", category:"Sistem", tags:["slide","emergency","safety"]},
+      {title:"Static port tersumbat", desc:"Static port tersumbat; altimeter dan VSI error.", category:"Avionik", tags:["static","port","sensor"]},
+      {title:"Engine vibration monitor error", desc:"Sensor vibrasi engine error; kalibrasi diperlukan.", category:"Mesin", tags:["engine","vibration","sensor"]},
+      {title:"Seat belt buckle rusak", desc:"Buckle sabuk pengaman patah; ganti segera.", category:"Sistem", tags:["seat","belt","safety"]},
+      {title:"Toilet waste tank full", desc:"Tangki limbah toilet penuh; perlu dikosongkan.", category:"Sistem", tags:["toilet","waste","cabin"]},
+      {title:"Air conditioning pack failure", desc:"Pack AC gagal; kabin tidak dingin.", category:"Sistem", tags:["AC","pack","cabin"]},
+      {title:"Nose gear shimmy damper leak", desc:"Damper roda depan bocor; landing bergetar.", category:"Landing Gear", tags:["nose gear","damper","leak"]},
+      {title:"TCAS antenna rusak", desc:"Antenna TCAS rusak; sistem collision avoidance down.", category:"Avionik", tags:["TCAS","antenna","collision"]},
+      {title:"Hydraulic reservoir low", desc:"Level hydraulic fluid rendah; top up dan cek leak.", category:"Sistem", tags:["hydraulic","reservoir","fluid"]},
+      {title:"Cockpit voice recorder noise", desc:"CVR merekam noise berlebih; cek microphone.", category:"Avionik", tags:["CVR","voice","recorder"]},
+      {title:"Cabin lighting flicker", desc:"Lampu kabin berkedip; periksa ballast dan wiring.", category:"Sistem", tags:["lighting","cabin","flicker"]},
+      {title:"Engine starter motor failure", desc:"Starter motor tidak bekerja; engine tidak start.", category:"Mesin", tags:["starter","motor","engine"]},
+      {title:"Pressurization controller error", desc:"Controller tekanan kabin error; ganti unit.", category:"Sistem", tags:["pressurization","controller","cabin"]},
+      {title:"Flap track damage", desc:"Track flap rusak; flap tidak smooth.", category:"Aerodinamika", tags:["flap","track","wing"]},
+      {title:"Fuel pump cavitation", desc:"Fuel pump cavitation; supply tidak stabil.", category:"Sistem", tags:["fuel","pump","cavitation"]},
+      {title:"ILS receiver malfunction", desc:"Receiver ILS tidak akurat; approach terganggu.", category:"Avionik", tags:["ILS","receiver","landing"]},
+      {title:"Tire pressure low", desc:"Tekanan ban kurang; inflasi segera.", category:"Landing Gear", tags:["tire","pressure","wheel"]},
+      {title:"APU fire bottle expired", desc:"Tabung pemadam APU kadaluarsa; ganti.", category:"Sistem", tags:["APU","fire","bottle"]},
+      {title:"Compressor wash diperlukan", desc:"Compressor engine kotor; performa turun.", category:"Mesin", tags:["compressor","wash","engine"]},
+      {title:"Passenger address system failure", desc:"PA system tidak bekerja; komunikasi kabin terganggu.", category:"Avionik", tags:["PA","communication","cabin"]},
+      {title:"Ram air turbine stuck", desc:"RAT tidak deploy; backup power gagal.", category:"Sistem", tags:["RAT","turbine","emergency"]},
+      {title:"Wing de-ice boot leak", desc:"Boot de-icing sayap bocor; kurang efektif.", category:"Aerodinamika", tags:["deicing","boot","wing"]},
+      {title:"Ground proximity warning error", desc:"GPWS warning palsu; sensor perlu cek.", category:"Avionik", tags:["GPWS","warning","sensor"]},
+      {title:"Fuel temperature high", desc:"Temperatur bahan bakar tinggi; cek cooler.", category:"Sistem", tags:["fuel","temperature","cooler"]}
+    ];
+
+
+const resultsArea = document.getElementById('resultsArea');
+const qInput = document.getElementById('q');
+const searchBtn = document.getElementById('searchBtn');
+
+const modalRoot = document.getElementById('modalRoot');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const modalCategory = document.getElementById('modalCategory');
+const modalTags = document.getElementById('modalTags');
+const btnClose = document.getElementById('btnClose');
+
+function renderResults(list){
+resultsArea.innerHTML='';
+if(list.length===0){
+resultsArea.innerHTML='<div class="col-span-full result-card text-center muted">Tidak ditemukan hasil.</div>';
+return;
+}
+list.forEach(article=>{
+const el = document.createElement('div');
+el.className='result-card fade-up';
+el.innerHTML=`<h4 class="font-semibold">${article.title}</h4><p class="muted text-sm">${article.desc.substring(0,80)}...</p>`;
+el.addEventListener('click',()=>openModal(article));
+resultsArea.appendChild(el);
+});
+}
+
+function search(q){
+if(!q||!q.trim()) return renderResults([]);
+const qL = q.toLowerCase();
+const filtered = DATASET.filter(d=>d.title.toLowerCase().includes(qL)||d.desc.toLowerCase().includes(qL)||d.tags.some(t=>t.includes(qL)));
+renderResults(filtered);
+}
+
+function openModal(article){
+modalTitle.textContent=article.title;
+modalBody.textContent=article.desc;
+modalCategory.textContent=article.category;
+modalTags.textContent=article.tags.join(', ');
+modalRoot.classList.remove('hidden');
+document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+modalRoot.classList.add('hidden');
+document.body.style.overflow='';
+}
+
+btnClose.addEventListener('click',closeModal);
+modalRoot.addEventListener('click',e=>{if(e.target===modalRoot) closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closeModal();});
+searchBtn.addEventListener('click',()=>search(qInput.value));
+qInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search(qInput.value);}});
+
+renderResults(DATASET);
+</script>
+</body>
+</html>
