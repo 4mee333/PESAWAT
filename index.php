@@ -20,8 +20,6 @@
     .modal-backdrop{background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);}
     .modal-box{background:#fff;border-radius:16px;padding:18px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
   </style>
-</head>
-<body>
 
 <header class="p-4 bg-indigo-600 text-white text-center font-bold text-xl">Pesawat Insight — Smart Lookup</header>
 
@@ -193,3 +191,4 @@ renderResults(DATASET);
 
 </body>
 </html>
+
