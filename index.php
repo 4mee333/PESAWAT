@@ -20,9 +20,7 @@
     .modal-backdrop{background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);}
     .modal-box{background:#fff;border-radius:16px;padding:18px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
   </style>
-
 <header class="p-4 bg-indigo-600 text-white text-center font-bold text-xl">Pesawat Insight — Smart Lookup</header>
-
 <main class="max-w-4xl mx-auto p-4">
   <div class="search flex gap-2 mb-4">
     <input id="q" placeholder="Ketik gejala, masalah, atau topik pesawat..." />
@@ -191,4 +189,5 @@ renderResults(DATASET);
 
 </body>
 </html>
+
 
